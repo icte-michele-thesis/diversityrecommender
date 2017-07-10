@@ -7,61 +7,73 @@ METADATA SCRAPER FROM IMDB
 
 @author: michele
 """
-
+import json
 import numpy as np
 import pandas as pd
-import requests
-from bs4 import BeautifulSoup
+from sklearn import preprocessing
+
+
+import matplotlib.pyplot as plt
+#import requests
+#from bs4 import BeautifulSoup
 
 #all_ratings = pd.read_csv("ml-20m/ratings.csv")
 # all_ratings.head()
 #all_movies = pd.read_csv("ml-20m/movies.csv")
 
-all_links = pd.read_csv("ml-20m/links.csv")
-
-# get all imdbids and movieids
-all_imdbids = all_links.imdbId
-all_movieids = all_links.movieId
-# all movie metadata go here
-# prepare the dictionary where to list the metadata
-movie_metadata = {'sdf':[f for f in all_imdbids],
-                  'sdf2':[f for f in all_movieids]}
+links = pd.read_csv("ml-latest-small/links.csv")
+movies = pd.read_csv("ml-latest-small/movies.csv")
+ratings = pd.read_csv("ml-latest-small/ratings.csv")
 
 
-# initially with the IMDBID
-#for m in all_imdbids:
-#    currmetadata = {'imdbid':m,
-#                    'movielensid':}
-#    movie_metadata.append(currmetadata)
 
-# get all urls from the imdbids
-    #============================== 1) EXTRACT EVERYTHING FROM IMDB
-imdbURL = "http://www.imdb.com/title/tt"
+        
+# import movie metadata from JSON FILE
+metadata = []
+with open('json_metadataFULL_final', encoding='utf-8') as datafile:
+    metadata = json.load(datafile)        
+metadatadf = pd.DataFrame(metadata).fillna(0)        
 
-for f in all_imdbids[0:10]:
-    req = requests.get(imdbURL + str(f))
-    soup = BeautifulSoup(req.content, 'lxml')
-    for movie in soup.findAll('td','title'):
-        title = movie.find('a').contents[0]
-        genres = movie.find('span','genre').findAll('a')
-        genres = [g.contents[0] for g in genres]
-        runtime = movie.find('span','runtime').contents[0]
-        rating = movie.find('span','value').contents[0]
-        year = movie.find('span','year_type').contents[0]
-        imdbID = movie.find('span','rating-cancel').a['href'].split('/')[2]
-        print(title, genres,runtime, rating, year)
+
         
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+DE = [m['imdbid'] for m in metadata if 'Hayao Miyazaki' in m['director']]    
+len(DE)    
+
+
+imdbratings = pd.merge(ratings, links, on='movieId', how='inner')
+# create ratings matrix        
+Rdf = imdbratings.pivot(index = 'userId',columns = 'imdbId',values = 'rating').fillna(0)
+R = Rdf.as_matrix()
+
+
+
+Rnan = R
+Rnan[Rnan == 0] = np.nan
+means = np.nanmean(Rnan[:, 1:], axis=1)
+stds = np.nanstd(Rnan[:, 1:], axis=1)
+
+#user_ratings_mean = np.ma.masked_equal(R, 0).mean(axis=1) #np.mean(R, axis = 1)
+#user_ratings_std = np.ma.masked_equal(R, 0).std(axis=1) #np.mean(R, axis = 1)
+
+
+# inspect the ratings and rating means and standard deviations
+# plt.hist(ratings.rating)
+# plt.hist(user_ratings_mean)
+# plt.hist(user_ratings_std)
+
+# normalize R by demeaning and dividing by std
+#R_zscored = (R - user_ratings_mean.reshape(-1, 1))/user_ratings_std.reshape(-1, 1)
+Rnan_zscored = (Rnan - means.reshape(-1, 1))/stds.reshape(-1, 1)
+Rnan_zscored[np.isnan(Rnan_zscored)] = 0      
+# np.count_nonzero(Rnan_zscored[1])
+
+
+
+
+# NOW WE HAVE THE MATRIX NORMALIZED!!!!!!! what to do???
+
+# check if ratings match the 0 mean by extracting those above 0 for a given user
+row1 = Rnan_zscored[120]
+whr = np.where(row1>0.8)
+R[0][whr]
+
