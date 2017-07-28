@@ -133,7 +133,7 @@ def get_IMDB_LSA_similaritylist(imdbid):
 #   133093 matrix
   
 def getsimilartitles(imdbid,topn):    
-    similarto = get_IMDB_LSA_similaritylist(133093)[0:topn]
+    similarto = get_IMDB_LSA_similaritylist(imdbid)[0:topn]
     indexes = [f[0] for f in similarto]
     fin1 = np.array(finaldata1.copy())
     imdbidsofsims = [f['imdbid'] for f in list(fin1[indexes])]
@@ -143,7 +143,12 @@ def getsimilartitles(imdbid,topn):
     # inspect the movies without feature
     return moviewo.title
 
-getsimilartitles(133093,20)
+
+
+
+
+
+print(getsimilartitles(245429,20))
 
 
 
