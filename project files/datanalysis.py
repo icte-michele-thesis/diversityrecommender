@@ -17,12 +17,8 @@ import pandas as pd
 #all_movies = pd.read_csv("ml-20m/movies.csv")
 
 all_links = pd.read_csv("ml-latest-small/links.csv")
-
-
-
-
-
-
+movies = pd.read_csv("ml-latest-small/movies.csv")
+movietitles = pd.merge(all_links, movies, on ='movieId', how='inner').drop(['movieId','tmdbId'],1)
 
 
 
@@ -53,6 +49,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 import matplotlib.pyplot as plt
 
 
+np.random.seed(42)
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
 
 
@@ -79,8 +77,7 @@ finaldata3 = importMoviesfromJSON('finaldata3')
 features1 = [m['features'] for m in finaldata1]
 
 # building the dictionary and the docterm matrix
-f1_dictionary
-f1_doc_term_matrix
+
 f1_dictionary = corpora.Dictionary(features1)
 f1_doc_term_matrix = [f1_dictionary.doc2bow(doc) for doc in features1]
                             
@@ -89,14 +86,12 @@ corpora.MmCorpus.serialize('LSA_finaldata1_CORPUS_full',f1_doc_term_matrix)
 
 # building the TFIDF matrix out of the docterm matrix
 f1_tfidf = gensim.models.TfidfModel(f1_doc_term_matrix)
-f1_tfidf_matrix = LSA_f1_tfidf[f1_doc_term_matrix]
-
+f1_tfidf_matrix = f1_tfidf[f1_doc_term_matrix]
 
 
     #==============================     7.1) APPLY LSA ON finaldata1
-
 # prepare the model
-f1_lsi = gensim.models.LsiModel(LSA_IMDB_tfidf_matrix, id2word=LSA_IMDB_dictionary, num_topics=40)
+f1_lsi = gensim.models.LsiModel(f1_tfidf_matrix, id2word=f1_dictionary, num_topics=40)
 
 # train the model on all plots
 f1_corpus_lsi = f1_lsi[f1_tfidf_matrix]
@@ -108,48 +103,47 @@ f1_index = similarities.MatrixSimilarity(f1_corpus_lsi)#LSA_IMDB_lsi[LSA_IMDB_co
 f1_index.save('f1_INDEX_full.index')
 
 
-
-
-
-
-
-
-
-
-
     #==============================     10) PREPARE SIMILARITY QUERIES FOR GIVEN IMDBIDS
 
 
-def get_test_movie(imdbid_test,imdbflag):
+def get_test_movie(imdbid_test,finaldata):
     """ it returns the bag of words corresponging to the plot of a given movie """
-    testplot = [f for f in finaldata if f['_IMDb_ID'] == imdbid_test]
-    if(imdbflag): # if True, it is an OMDB plot and the OMDB plot dictionary is used
-        plot = testplot[0]['imdb_plot']
-        plot_bow = LSA_IMDB_dictionary.doc2bow(tokenize_only(plot))
-    else:
-        plot = testplot[0]['plot']
-        plot_bow = LSA_WIKI_dictionary.doc2bow(tokenize_only(plot))
-    return plot_bow # test_IMDB_bow,test_WIKI_bow
+    testfeatures = [f for f in finaldata if f['imdbid'] == imdbid_test]
+    features = testfeatures[0]['features']
+    features_bow = f1_dictionary.doc2bow(features) # dictionary is can be a parameter to this function
+    return features_bow # test_IMDB_bow,test_WIKI_bow
     
 
 
 # test on IMDB LSA
 def get_IMDB_LSA_similaritylist(imdbid):
     start = time.time()
-    test_IMDB_bow = get_test_movie(imdbid,True)
-    tfidf_bow = LSA_IMDB_tfidf[test_IMDB_bow]
-    vec_lsi = LSA_IMDB_lsi[tfidf_bow]
-    sims_imdb_lsa = LSA_IMDB_index[vec_lsi]
+    test_feature_bow = get_test_movie(imdbid,finaldata1)
+    tfidf_bow = f1_tfidf[test_feature_bow] #  tfidf can be a parameter
+    vec_lsi = f1_lsi[tfidf_bow] #             lsi can be a parameter
+    sims_imdb_lsa = f1_index[vec_lsi]
     sims_imdb_lsa = sorted(enumerate(sims_imdb_lsa), key=lambda item: -item[1])
     end = time.time()
     print("Time elapsed: "+ str(end - start))
     return sims_imdb_lsa
 
 
+# test imdbids:
+#   245429 spirited away
+#   133093 matrix
+  
+def getsimilartitles(imdbid,topn):    
+    similarto = get_IMDB_LSA_similaritylist(133093)[0:topn]
+    indexes = [f[0] for f in similarto]
+    fin1 = np.array(finaldata1.copy())
+    imdbidsofsims = [f['imdbid'] for f in list(fin1[indexes])]
+    similarimdbids = {'imdbId' : imdbidsofsims}
+    similardf = pd.DataFrame.from_dict(similarimdbids)
+    moviewo = pd.merge(movietitles, similardf, on='imdbId', how='inner')
+    # inspect the movies without feature
+    return moviewo.title
 
-
-
-
+getsimilartitles(133093,20)
 
 
 

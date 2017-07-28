@@ -349,27 +349,37 @@ with open('METADATANOMISSING.json', 'w') as fout:
 #============================6-EXTRACT THE LIST OF FEATURES FROM EACH DATASET AND MAKE================================== 
 #============================ SURE THAT EACH WORD IS LINKED TO THE TYPE OF METADATA=====================================
 #============================--THIS IS THE LAST STEP TO GET THE DATASETS--=====================================
+def importMoviesfromJSON(JSONfile):
+    data = [] # list of movies from json
+    with open(JSONfile, encoding='utf-8') as datafile:
+        data = json.load(datafile)
+    return data
+
+metadatacleaned = importMoviesfromJSON('METADATAPRIMARYMISSING.json')
+metadatawoogw = importMoviesfromJSON('METADATANOMUSICANDWRITER.json')
+metadatanomissing = importMoviesfromJSON('METADATANOMISSING.json')
+
+f1 = getfeaturedataset(metadatacleaned[0:10])
+[f['imdbid'] for f in f1[0:10]]
 
 
 def getlistoffeatures(d): 
     # d is the dictionary from the metadata files of a single movie
     # need to link the feature to its type (director, company, cast, etc.)
     listoffeatures = []
-    imdbid = d['imdbid']
     for k,v in d.items():
         if(type(v)!=int):
             for item in v:
                 listoffeatures.append('('+k+')'+'_'+'('+item+')')
-    return imdbid, listoffeatures # returns the imdbid and the list of features
+    return listoffeatures # returns the imdbid and the list of features
 
 
 def getfeaturedataset(data): 
     # for all movies in the dataset data get the features and the corresp imdbid
     finaldata = []
     for m in data:
-        imdbid,features = getlistoffeatures(m)
-        curr['imdbid'] = imdbid
-        curr['features'] = features
+        curr = {'imdbid' :   m['imdbid'],
+                'features' : getlistoffeatures(m)}
         finaldata.append(curr)
     return finaldata
 
@@ -385,6 +395,19 @@ def getandsavedataset(metadatafile,jsonname):
 getandsavedataset(metadatacleaned,'finaldata1') # dataset 1 movies removed for errors in imdb features but N/A left for other features
 getandsavedataset(metadatawoogw,'finaldata2') # dataset 3 as above but without OST and writer (the features with most missing vals in movies)
 getandsavedataset(metadatanomissing,'finaldata3') # dataset 3 no missing features
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
