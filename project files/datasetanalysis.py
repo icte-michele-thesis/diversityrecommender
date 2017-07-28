@@ -219,7 +219,6 @@ def createFrquencyTable(word_list):
 #2.2 get the languages
 def findlanguagefor(country):
     import operator
-    from operator import itemgetter
     wordlist = []
     for m in metadataklim:
         # print the first language for a movie with country = country
@@ -241,97 +240,49 @@ for i,m in enumerate(metadataklim):
 
 
 #============================0-ANALYZE FREQUENCIES-=====================================
-# analyze writer:
-writers = []
-for m in metadataklim:
-    writers.append(m['writer'])
-writersfreq = list(sorted(createFrquencyTable(writers).items(), key=operator.itemgetter(1), reverse=True))    
-writersfreq[0:20]  
+def analyzefeature(feature):
+    import operator
+    elems = []
+    for m in metadataklim:
+        elems.append(m[feature])
+    elemssfreq = list(sorted(createFrquencyTable(elems).items(), key=operator.itemgetter(1), reverse=True))    
+    return elemssfreq
 
+# analyze writer:
+analyzefeature('writer')[0:20]  
 
 # analyze director:
-directors = []
-for m in metadataklim:
-    directors.append(m['director'])
-directorsfreq = list(sorted(createFrquencyTable(directors).items(), key=operator.itemgetter(1), reverse=True))    
-  
+analyzefeature('director')[0:20] 
 
 # analyze releases:
-releases = []
-for m in metadataklim:
-    releases.append(m['release'])
-releasesfreq = list(sorted(createFrquencyTable(releases).items(), key=operator.itemgetter(1), reverse=True))    
-  
+analyzefeature('release')[0:20] 
 
 # analyze company:
-companies = []
-for m in metadataklim:
-    companies.append(m['company'])
-companiesfreq = list(sorted(createFrquencyTable(companies).items(), key=operator.itemgetter(1), reverse=True))    
+analyzefeature('company')[0:20] 
   
 # analyze cast
-casts = []
-for m in metadataklim:
-    casts.append(m['cast'])
-castsfreq = list(sorted(createFrquencyTable(casts).items(), key=operator.itemgetter(1), reverse=True))    
+analyzefeature('cast')[0:20] 
 
-
-# analyze original music
-musics = []
-for m in metadataklim:
-    musics.append(m['original music'])
-musicsfreq = list(sorted(createFrquencyTable(musics).items(), key=operator.itemgetter(1), reverse=True))    
+# analyze original music 
+analyzefeature('original music')[0:20] 
 
 # analyze keywords
-keywords = []
-for m in metadataklim:
-    keywords.append(m['keywords'])
-keywordsfreq = list(sorted(createFrquencyTable(keywords).items(), key=operator.itemgetter(1), reverse=True))    
+analyzefeature('keywords')[0:20]
 
 # analyze languages
-languages = []
-for m in metadataklim:
-    languages.append(m['languages'])
-languagesfreq = list(sorted(createFrquencyTable(languages).items(), key=operator.itemgetter(1), reverse=True))    
+analyzefeature('languages')[0:20]
 
 # analyze countries
-countries = []
-for m in metadataklim:
-    countries.append(m['countries'])
-countriesfreq = list(sorted(createFrquencyTable(countries).items(), key=operator.itemgetter(1), reverse=True))    
+analyzefeature('countries')[0:20]
 
 # analyze release
-releases = []
-for m in metadataklim:
-    releases.append(m['release'])
-releasesfreq = list(sorted(createFrquencyTable(releases).items(), key=operator.itemgetter(1), reverse=True))    
+analyzefeature('release')[0:20]
 
 # analyze genre
-genres = []
-for m in metadataklim:
-    genres.append(m['genres'])
-genresfreq = list(sorted(createFrquencyTable(genres).items(), key=operator.itemgetter(1), reverse=True))    
+analyzefeature('genres')[0:20]
 
 
-
-
-
-#============================5.1-MAKE SEPARATE METADATA WITHOUT the following FEATURES:-=====================================
-# remove features with high percentage of N/A:
-    # original music 734
-    # writer 202
-metadatawoogw = []
-for i,m in enumerate(metadataklim):
-    temp = m.copy()
-    temp.pop('original music',None)
-    temp.pop('writer',None)
-    metadatawoogw.append(temp)
-
-with open('METADATANOMUSICANDWRITER.json', 'w') as fout:
-    json.dump(metadatawoogw, fout)
-
-
-#============================5.2-CLEAN movies in original METADATA-=====================================
+#============================5.1-CLEAN movies in original METADATA-=====================================
 # REMOVE MOVIES WITH N/A FEATURES (not all):
     # wo countries
     # wo keywords
@@ -342,7 +293,35 @@ with open('METADATANOMUSICANDWRITER.json', 'w') as fout:
     # company
     # original music
     # writer
-    
+metadatacleaned = []
+for i,m in enumerate(metadataklim):
+    if('N/A' not in m['countries'] and 'N/A' not in m['keywords'] and 
+       'N/A' not in m['director'] and 'N/A' not in m['release']):
+        metadatacleaned.append(m)
+
+with open('METADATAPRIMARYMISSING.json', 'w') as fout:
+    json.dump(metadatacleaned, fout)
+
+
+#============================5.2-MAKE SEPARATE METADATA WITHOUT the following FEATURES:-=====================================
+# remove features with high percentage of N/A:
+    # original music 734
+    # writer 202
+# then proceed as above
+metadatawoogw = []
+for i,m in enumerate(metadataklim):
+    temp = m.copy()
+    temp.pop('original music',None)
+    temp.pop('writer',None)
+    if('N/A' not in temp['countries'] and 'N/A' not in temp['keywords'] and 
+       'N/A' not in temp['director'] and 'N/A' not in temp['release']):
+        metadatawoogw.append(temp)
+
+with open('METADATANOMUSICANDWRITER.json', 'w') as fout:
+    json.dump(metadatawoogw, fout)
+
+
+
     
     
     
@@ -357,6 +336,55 @@ for i,m in enumerate(metadataklim):
     
 with open('METADATANOMISSING.json', 'w') as fout:
     json.dump(metadatanomissing, fout)
+
+
+
+
+
+
+
+
+
+
+#============================6-EXTRACT THE LIST OF FEATURES FROM EACH DATASET AND MAKE================================== 
+#============================ SURE THAT EACH WORD IS LINKED TO THE TYPE OF METADATA=====================================
+#============================--THIS IS THE LAST STEP TO GET THE DATASETS--=====================================
+
+
+def getlistoffeatures(d): 
+    # d is the dictionary from the metadata files of a single movie
+    # need to link the feature to its type (director, company, cast, etc.)
+    listoffeatures = []
+    imdbid = d['imdbid']
+    for k,v in d.items():
+        if(type(v)!=int):
+            for item in v:
+                listoffeatures.append('('+k+')'+'_'+'('+item+')')
+    return imdbid, listoffeatures # returns the imdbid and the list of features
+
+
+def getfeaturedataset(data): 
+    # for all movies in the dataset data get the features and the corresp imdbid
+    finaldata = []
+    for m in data:
+        imdbid,features = getlistoffeatures(m)
+        curr['imdbid'] = imdbid
+        curr['features'] = features
+        finaldata.append(curr)
+    return finaldata
+
+
+
+# GET THE FEATURE DATASETS FROM THE 3 METADATA FILES and save to JSON
+def getandsavedataset(metadatafile,jsonname):
+    finaldata = getfeaturedataset(metadatafile)
+    with open(jsonname, 'w') as fout:
+        json.dump(finaldata, fout)
+
+
+getandsavedataset(metadatacleaned,'finaldata1') # dataset 1 movies removed for errors in imdb features but N/A left for other features
+getandsavedataset(metadatawoogw,'finaldata2') # dataset 3 as above but without OST and writer (the features with most missing vals in movies)
+getandsavedataset(metadatanomissing,'finaldata3') # dataset 3 no missing features
 
 
 
