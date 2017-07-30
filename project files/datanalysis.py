@@ -16,12 +16,11 @@ import pandas as pd
 # all_ratings.head()
 #all_movies = pd.read_csv("ml-20m/movies.csv")
 
-all_links = pd.read_csv("ml-latest-small/links.csv")
-movies = pd.read_csv("ml-latest-small/movies.csv")
-movietitles = pd.merge(all_links, movies, on ='movieId', how='inner').drop(['movieId','tmdbId'],1)
-
-
-
+def gettitles():
+    all_links = pd.read_csv("ml-latest-small/links.csv")
+    movies = pd.read_csv("ml-latest-small/movies.csv")
+    movietitles = pd.merge(all_links, movies, on ='movieId', how='inner').drop(['movieId','tmdbId'],1)
+    return movietitles.to_dict(orient = 'records')
 
 
 
@@ -137,18 +136,16 @@ def getsimilartitles(imdbid,topn):
     indexes = [f[0] for f in similarto]
     fin1 = np.array(finaldata1.copy())
     imdbidsofsims = [f['imdbid'] for f in list(fin1[indexes])]
-    similarimdbids = {'imdbId' : imdbidsofsims}
-    similardf = pd.DataFrame.from_dict(similarimdbids)
-    moviewo = pd.merge(movietitles, similardf, on='imdbId', how='inner')
-    # inspect the movies without feature
-    return moviewo.title
+    similarmovies = []
+    movietitles = gettitles()
+    for imdbid in imdbidsofsims:
+        similarmovies.append([d['title'] for d in movietitles if d['imdbId']==imdbid][0])
+    return similarmovies
 
 
 
 
+topn = 10
+get_IMDB_LSA_similaritylist(347149)[0:topn]
 
-
-print(getsimilartitles(245429,20))
-
-
-
+similars = getsimilartitles(11237,30)
