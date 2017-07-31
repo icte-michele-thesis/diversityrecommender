@@ -16,11 +16,6 @@ import pandas as pd
 # all_ratings.head()
 #all_movies = pd.read_csv("ml-20m/movies.csv")
 
-def gettitles():
-    all_links = pd.read_csv("ml-latest-small/links.csv")
-    movies = pd.read_csv("ml-latest-small/movies.csv")
-    movietitles = pd.merge(all_links, movies, on ='movieId', how='inner').drop(['movieId','tmdbId'],1)
-    return movietitles.to_dict(orient = 'records')
 
 
 
@@ -30,6 +25,13 @@ def gettitles():
 
 
 
+
+"""
+    #==============================     BEGINNING OF
+    #==============================    LSA WITH GENSIM, THE CONTENT BASED FILTERING METHOD THAT WILL BE USED
+    #==============================    IN THE EXPERIMENT
+    #==============================    
+"""
 
 # try some LSA with the final datasets
 import random
@@ -39,18 +41,20 @@ import json
 import time
 import logging
 
-
-
 # GENSIM
 import gensim
 from gensim import corpora, similarities
 from sklearn.metrics.pairwise import cosine_similarity
 import matplotlib.pyplot as plt
-
-
 np.random.seed(42)
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
+
+def gettitles():
+    all_links = pd.read_csv("ml-latest-small/links.csv")
+    movies = pd.read_csv("ml-latest-small/movies.csv")
+    movietitles = pd.merge(all_links, movies, on ='movieId', how='inner').drop(['movieId','tmdbId'],1)
+    return movietitles.to_dict(orient = 'records')
 
 
 
@@ -67,10 +71,7 @@ finaldata3 = importMoviesfromJSON('finaldata3')
 
 
 
-
-
-
-    #==============================    6) PREPARE DICTIONARIES AND TFIDF MATRICES for finaldata1
+    #==============================    1) PREPARE DICTIONARIES AND TFIDF MATRICES for finaldata1
 
     
 features1 = [m['features'] for m in finaldata1]
@@ -88,7 +89,7 @@ f1_tfidf = gensim.models.TfidfModel(f1_doc_term_matrix)
 f1_tfidf_matrix = f1_tfidf[f1_doc_term_matrix]
 
 
-    #==============================     7.1) APPLY LSA ON finaldata1
+    #==============================     2) APPLY LSA ON finaldata1
 # prepare the model
 f1_lsi = gensim.models.LsiModel(f1_tfidf_matrix, id2word=f1_dictionary, num_topics=40)
 
@@ -102,7 +103,7 @@ f1_index = similarities.MatrixSimilarity(f1_corpus_lsi)#LSA_IMDB_lsi[LSA_IMDB_co
 f1_index.save('f1_INDEX_full.index')
 
 
-    #==============================     10) PREPARE SIMILARITY QUERIES FOR GIVEN IMDBIDS
+    #==============================     3) PREPARE SIMILARITY QUERIES FOR GIVEN IMDBIDS
 
 
 def get_test_movie(imdbid_test,finaldata):
@@ -142,10 +143,49 @@ def getsimilartitles(imdbid,topn):
         similarmovies.append([d['title'] for d in movietitles if d['imdbId']==imdbid][0])
     return similarmovies
 
+"""
+    #==============================     END OF:
+    #==============================    LSA WITH GENSIM, THE CONTENT BASED FILTERING METHOD THAT WILL BE USED
+    #==============================    IN THE EXPERIMENT
+    #==============================    
+"""
 
-
-
-topn = 10
-get_IMDB_LSA_similaritylist(347149)[0:topn]
-
+# try some for a given movie id
 similars = getsimilartitles(11237,30)
+
+
+
+
+
+
+
+
+"""
+    #==============================     beginning of
+    #==============================    CREATION OF USER MATRIX, FEATURE MATRIX AND USER FEATURE MATRIX
+    #==============================    
+"""
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

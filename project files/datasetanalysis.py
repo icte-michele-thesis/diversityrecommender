@@ -49,13 +49,6 @@ linksimdb = list(links.imdbId) # the list of imdbid corresponding to movies rate
 
 
 
-movieratings = pd.merge(ratingswmstd, movies, on ='movieId', how='inner')
-
-moviegroups = movieratings.groupby('title')
-moviestats = moviegroups.agg({'rating':[np.size,np.mean,np.std]}) # statistics on movies
-moviestats[moviestats['rating']['size'] >= 50].sort_values([('rating', 'mean')], ascending=False) 
-
-
       
 # import movie metadata from JSON FILE
 metadata = []
@@ -401,7 +394,11 @@ getandsavedataset(metadatanomissing,'finaldata3') # dataset 3 no missing feature
 
 
 
-
+def getdataset(jsonfile):
+    data = [] # list of movies from json
+    with open(jsonfile, encoding='utf-8') as datafile:
+        data = json.load(datafile)
+    return data
 
 
 
@@ -424,18 +421,52 @@ DE = [m['imdbid'] for m in metadata if 'Hayao Miyazaki' in m['director']]
 len(DE)    
 
 # EXPLORATORY ANALYSIS:
+links = pd.read_csv("ml-latest-small/links.csv")
+movies = pd.read_csv("ml-latest-small/movies.csv")
+ratings = pd.read_csv("ml-latest-small/ratings.csv")
 
+# MOVIE AND USER STATISTICS: MEAN AND STD FOR EACH USERID AND MOVIEID
+userstats = ratings.groupby('userId', as_index=False).agg({'rating':[np.size,np.mean,np.std]}) # statistics on users
+ratingswmstd = pd.merge(ratings, userstats, on ='userId', how='inner')
+# get normalized ratings!!
+ratingswmstd['normrating'] = (ratingswmstd['rating'] - ratingswmstd[('rating', 'mean')])/ratingswmstd[('rating', 'std')]
+# leave only the normalized rating, userid and movieid in the new dataset
+ratingswmstd[ratingswmstd['normrating']>0].movieId
+# 6734 movies!! :
+len(list(set(ratingswmstd[ratingswmstd['normrating']>0].movieId)))
+
+moviesabovethreshold = pd.DataFrame(ratingswmstd[ratingswmstd['normrating']>0].movieId).drop_duplicates()
+# select imdbids corresponding to the movies there!
+links = pd.merge(links, moviesabovethreshold, on = 'movieId', how = 'inner')
+linksimdb = list(links.imdbId) # the list of imdbid corresponding to movies rated above the normalized rating threshold
+
+    
+    
+    
+    
+    
+    
+movieratings = pd.merge(ratingswmstd, movies, on ='movieId', how='inner')
+
+moviegroups = movieratings.groupby('title')
+moviestats = moviegroups.agg({'rating':[np.size,np.mean,np.std]}) # statistics on movies
+moviestats[moviestats['rating']['size'] >= 50].sort_values([('rating', 'size')], ascending=False) 
+
+    
+    
+    
+    
 #get movie distribution by users:
-movieratings.title.plot.hist(bins=90)
+userdistr = movieratings.groupby('userId').agg({'rating':[np.size]}).sort_values([('rating', 'size')], ascending=False) 
+userdistr.plot.hist(bins=100) # freq of ratings per users
+movieratings.rating.plot.hist()
 movieratings.title.value_counts().sort_values(ascending = True)[:25]
 
 
-imdbratings = pd.merge(ratings, links, on='movieId', how='inner')
+imdbratings = pd.merge(movieratings, links, on='movieId', how='inner')
 # create ratings matrix        
 Rdf = imdbratings.pivot(index = 'userId',columns = 'imdbId',values = 'rating').fillna(0)
 R = Rdf.as_matrix()
-
-
 
 Rnan = R
 Rnan[Rnan == 0] = np.nan
@@ -466,4 +497,50 @@ Rnan_zscored[np.isnan(Rnan_zscored)] = 0
 row1 = Rnan_zscored[120]
 whr = np.where(row1>0.8)
 R[0][whr]
+
+
+
+
+
+
+# get the dataset and begin to make the ITEMxFEATURE dataset
+dataset1 = getdataset('finaldata1')
+
+
+
+
+
+# make the userXitemfeature dataset:
+imdbratings = pd.merge(movieratings, links, on='movieId', how='inner').drop(['timestamp',('rating', 'size'), ('rating', 'mean'),  ('rating', 'std'),'title'],1)
+selectedratings = imdbratings[imdbratings['normrating']>=0]
+userids = list(set(selectedratings.userId))
+userXratings = []
+for uid in userids:
+    # get all ratings for that userid and put them into a list
+    moviesforuid = selectedratings[selectedratings['userId']==uid]
+    uxr = {'userid' : uid,
+           'moviesratings' : moviesforuid[['imdbId','rating']].to_dict(orient = 'records')}
+    userXratings.append(uxr)
+    
+
+# make a merge with the dataset features!!!
+for i,ur in enumerate(userXratings):
+    curru = ur['userid']
+    for j,mr in enumerate(ur['moviesratings']):
+        for mf in dataset1:            
+            if(mr['imdbId'] == mf['imdbid']):
+                userXratings[i]['moviesratings'][j]['features'] = mf['features']
+
+
+# the dataset of user features!!!!
+userXfeatures = []
+for i,uid in enumerate(userXratings):
+    features = [ff['features'] for ff in userXratings[i]['moviesratings'] if('features' in ff.keys())]
+    uxf = {'userid' : uid['userid'],
+           'features' : [item for sublist in features for item in sublist]}
+    userXfeatures.append(uxf)
+    
+
+# save the user features dataset to JSON!!
+
 
