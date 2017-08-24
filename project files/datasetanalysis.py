@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Mon Jun 12 15:24:56 2017
- 
+
 METADATA analysis
 
 @author: michele
@@ -349,21 +349,34 @@ def importMoviesfromJSON(JSONfile):
     return data
 
 metadatacleaned = importMoviesfromJSON('METADATAPRIMARYMISSING.json')
+addtruncatedrelease(metadatacleaned) # add decade to the movie metadata!!!
 metadatawoogw = importMoviesfromJSON('METADATANOMUSICANDWRITER.json')
 metadatanomissing = importMoviesfromJSON('METADATANOMISSING.json')
+addtruncatedrelease(metadatanomissing)
 
 f1 = getfeaturedataset(metadatacleaned[0:10])
 [f['imdbid'] for f in f1[0:10]]
 
+def addtruncatedrelease(metadatacleaned):
+    for i,m in enumerate(metadatacleaned):
+        metadatacleaned[i]['decade'] = [str(int(int(m['release'][0])/10)*10)]
+#
+#def truncatekeywords(meta):
+#    for i,m in enumerate(meta):
+#        meta[i]['keywords'] = m['keywords'][:50]
+
+#truncatekeywords(metadatacleaned)
 
 def getlistoffeatures(d): 
     # d is the dictionary from the metadata files of a single movie
     # need to link the feature to its type (director, company, cast, etc.)
     listoffeatures = []
     for k,v in d.items():
-        if(type(v)!=int):
+        if(type(v)!=int and type(v)!=str):
             for item in v:
                 listoffeatures.append('('+k+')'+'_'+'('+item+')')
+        elif(type(v)==str):
+            listoffeatures.append('('+k+')'+'_'+'('+v+')')
     return listoffeatures # returns the imdbid and the list of features
 
 
@@ -389,6 +402,36 @@ getandsavedataset(metadatacleaned,'finaldata1') # dataset 1 movies removed for e
 getandsavedataset(metadatawoogw,'finaldata2') # dataset 3 as above but without OST and writer (the features with most missing vals in movies)
 getandsavedataset(metadatanomissing,'finaldata3') # dataset 3 no missing features
 
+
+
+
+# make a get feature dataset simple without including the type of metadata (genre, cast, etc.)
+def getlistoffeaturessimple(d): 
+    # d is the dictionary from the metadata files of a single movie
+    # need to link the feature to its type (director, company, cast, etc.)
+    listoffeatures = []
+    for k,v in d.items():
+        if(type(v)!=int):
+            for item in v:
+                listoffeatures.append('('+item+')')
+    return listoffeatures # returns the imdbid and the list of features
+
+def getfeaturedatasetsimple(data): 
+    # for all movies in the dataset data get the features and the corresp imdbid
+    finaldata = []
+    for m in data:
+        curr = {'imdbid' :   m['imdbid'],
+                'features' : getlistoffeatures(m),
+                'simplefeatures' : getlistoffeaturessimple(m)}
+        finaldata.append(curr)
+    return finaldata
+
+def getandsavedatasetsimple(metadatafile,jsonname):
+    finaldata = getfeaturedatasetsimple(metadatafile)
+    with open(jsonname, 'w') as fout:
+        json.dump(finaldata, fout)
+
+getandsavedatasetsimple(metadatacleaned,'simplefinaldata1')
 
 
 
@@ -503,16 +546,26 @@ R[0][whr]
 
 
 
+
+
+
+
+
+
+
+
+
+
+
 # get the dataset and begin to make the ITEMxFEATURE dataset
 dataset1 = getdataset('finaldata1')
 
-
-
-
-
 # make the userXitemfeature dataset:
-imdbratings = pd.merge(movieratings, links, on='movieId', how='inner').drop(['timestamp',('rating', 'size'), ('rating', 'mean'),  ('rating', 'std'),'title'],1)
-selectedratings = imdbratings[imdbratings['normrating']>=0]
+imdbratings = pd.merge(movieratings, links, on='movieId', how='inner')#.drop(['timestamp',('rating', 'size'), ('rating', 'mean'),  ('rating', 'std'),'title'],1)
+imdbratings['binrating'] = np.where(imdbratings['normrating']>0, 1, -1) # binarized ratings
+
+selectedratings = imdbratings[imdbratings['binrating']==1]
+selectedratings = imdbratings
 userids = list(set(selectedratings.userId))
 userXratings = []
 for uid in userids:
@@ -529,18 +582,262 @@ for i,ur in enumerate(userXratings):
     for j,mr in enumerate(ur['moviesratings']):
         for mf in dataset1:            
             if(mr['imdbId'] == mf['imdbid']):
-                userXratings[i]['moviesratings'][j]['features'] = mf['features']
-
+                userXratings[i]['moviesratings'][j]['features'] = mf['features']#[m for m in mf['features'] if '(release)_' not in m]
+             #       
 
 # the dataset of user features!!!!
 userXfeatures = []
 for i,uid in enumerate(userXratings):
     features = [ff['features'] for ff in userXratings[i]['moviesratings'] if('features' in ff.keys())]
-    uxf = {'userid' : uid['userid'],
+    uxf = {'userid' : str(uid['userid']),
            'features' : [item for sublist in features for item in sublist]}
     userXfeatures.append(uxf)
     
 
+
+
 # save the user features dataset to JSON!!
+with open('userXfeatures1-fullratings', 'w') as fout:
+    json.dump(userXfeatures, fout)
+    
+
+
+
+
+
+
+
+## no NO NOT ANYMORE
+## do the same with simple features:
+#simpledataset1 = getdataset('simplefinaldata1')
+#
+## make a merge with the dataset features!!!
+#for i,ur in enumerate(userXratings):
+#    curru = ur['userid']
+#    for j,mr in enumerate(ur['moviesratings']):
+#        for mf in simpledataset1:            
+#            if(mr['imdbId'] == mf['imdbid']):
+#                userXratings[i]['moviesratings'][j]['features'] = mf['simplefeatures']
+#
+#
+## the dataset of user features!!!!
+#userXfeatures = []
+#for i,uid in enumerate(userXratings):
+#    features = [ff['features'] for ff in userXratings[i]['moviesratings'] if('features' in ff.keys())]
+#    uxf = {'userid' : str(uid['userid']),
+#           'features' : [item for sublist in features for item in sublist]}
+#    userXfeatures.append(uxf)
+#
+## save the user features dataset to JSON!!
+#with open('simpleuserXfeatures1', 'w') as fout:
+#    json.dump(userXfeatures, fout)
+#    
+#
+
+
+
+
+
+
+
+
+
+    
+# ========= NOW WE HAVE THE USERXFEATURE DATASET with the FINALDATA1 movie dataset
+userXfeatures = importMoviesfromJSON('userXfeatures1')
+# transform a little bit the features in the dataset
+for i,uf in enumerate(userXfeatures):
+    stringfeature = uf['features']
+    strf = ''
+    for s in stringfeature:
+        strf += ' '+s
+    userXfeatures[i]['string_features'] = strf
+
+
+# make a dataframe with all features and userids
+userXfeaturesdf = pd.DataFrame({'userid' : [u['userid'] for u in userXfeatures],
+                                'features' : [u['string_features'] for u in userXfeatures]})
+
+
+
+
+
+# perform TFIDF on the dataframe
+from sklearn.feature_extraction.text import TfidfVectorizer
+v = TfidfVectorizer(max_df=0.8, min_df=2)
+UF = v.fit_transform(userXfeaturesdf['features'])
+
+# svd
+
+
+
+# perform SVD on the TFIDF transformed matrix (UF)
+from sklearn.decomposition import TruncatedSVD
+svd = TruncatedSVD(n_components=670, n_iter=10, random_state=0)
+svd.fit(UF) 
+#print(svd.explained_variance_ratio_)
+#print(svd.explained_variance_ratio_.sum())
+
+cumulative = np.cumsum(svd.explained_variance_ratio_)
+plt.plot(cumulative, c='blue')
+plt.show()
+
+
+from scipy.sparse.linalg import svds
+import scipy
+
+X = scipy.sparse.csc_matrix(UF)
+U, S, Vt = svds(X, 400)
+cumulative = np.cumsum(np.power(sorted(S, reverse=True),2)/sum(np.power(sorted(S, reverse=True),2)))
+plt.plot(cumulative, c='blue')
+plt.show() # at around 400 singular values the shit is high
+
+
+
+# t-sne visualization
+from bhtsne import tsne
+tsne_U = tsne(U)
+# t-sne plot
+plt.scatter(tsne_U[:, 0], tsne_U[:, 1], alpha=0.1)
+
+# svd 670 plot
+plt.scatter(U[:, 0], U[:, 1], alpha=0.1)
+
+
+
+from sklearn.manifold import TSNE
+tsne__U = TSNE(n_components=2, verbose=1, perplexity=20, n_iter=1000)
+tsne_results = tsne__U.fit_transform(U)
+plt.scatter(tsne_results[:, 0], tsne_results[:, 1], alpha=0.1)
+#chart = ggplot( df_tsne, aes(x='x-tsne', y='y-tsne', color='label') ) \
+#        + geom_point(size=70,alpha=0.1) \
+#        + ggtitle("tSNE dimensions colored by digit")
+#chart
+
+
+
+tsne2_U = TSNE(n_components=2,random_state=0)
+tsne2_results = tsne2_U.fit_transform(U)
+plt.figure()
+plt.scatter(tsne2_results[:, 0], tsne2_results[:, 1])
+plt.show()
+
+
+
+
+
+
+
+
+
+
+# to do further processing on matlab
+def savematrix(arr,path):
+    import numpy, scipy.io    
+    scipy.io.savemat(path, mdict={'arr': arr})
+
+savematrix(X,'matrixusertfidfdataset1.mat')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# try 2 with simple dataset features without key
+# ========= NOW WE HAVE THE USERXFEATURE DATASET with the FINALDATA1 movie dataset
+userXfeatures = importMoviesfromJSON('simpleuserXfeatures1')
+# transform a little bit the features in the dataset
+for i,uf in enumerate(userXfeatures):
+    stringfeature = uf['features']
+    strf = ''
+    for s in stringfeature:
+        strf += ' '+s
+    userXfeatures[i]['string_features'] = strf
+
+
+# make a dataframe with all features and userids
+userXfeaturesdf = pd.DataFrame({'userid' : [u['userid'] for u in userXfeatures],
+                                'features' : [u['string_features'] for u in userXfeatures]})
+
+
+
+
+
+# perform TFIDF on the dataframe
+from sklearn.feature_extraction.text import TfidfVectorizer
+v = TfidfVectorizer(max_df=0.5, min_df=2)
+UF = v.fit_transform(userXfeaturesdf['features'])
+
+
+from sklearn.decomposition import TruncatedSVD
+svd = TruncatedSVD(n_components=670, n_iter=10, random_state=0)
+svd.fit(UF) 
+#print(svd.explained_variance_ratio_)
+#print(svd.explained_variance_ratio_.sum())
+
+cumulative = np.cumsum(svd.explained_variance_ratio_)
+plt.plot(cumulative, c='blue')
+plt.show()
+
+
+from scipy.sparse.linalg import svds
+import scipy
+
+X = scipy.sparse.csc_matrix(UF)
+U, S, Vt = svds(X, 670)
+cumulative = np.cumsum(np.power(sorted(S,reverse=True),2)/sum(np.power(sorted(S,reverse=True),2)))
+plt.plot(cumulative, c='blue')
+plt.show()
+
+
+# t-sne visualization
+def tsnevis(U):
+    from bhtsne import tsne
+    tsne_U = tsne(U)
+    # t-sne plot
+    plt.scatter(tsne_U[:, 0], tsne_U[:, 1], alpha=0.1)
+    plt.show()
+
+tsnevis(U)
+# svd 670 plot
+plt.scatter(U[:, 0], U[:, 1], alpha=0.1)
+
+
+
+
+
+
+
+
+
+
+
 
 
