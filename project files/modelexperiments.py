@@ -108,6 +108,16 @@ def importMoviesfromJSON(JSONfile):
     return data
 
 #userXfeatures = importMoviesfromJSON('userXfeatures1') # user feature dataset
+# make a merge with the dataset features!!!
+dataset1 = getdataset('finaldata1')
+for i,ur in enumerate(userXratings):
+    curru = ur['userid']
+    for j,mr in enumerate(ur['moviesratings']):
+        for mf in dataset1:            
+            if(mr['imdbId'] == mf['imdbid']):
+                userXratings[i]['moviesratings'][j]['features'] = mf['features']#[m for m in mf['features'] if '(release)_' not in m]
+             #       
+
 # the dataset of user features!!!!
 userXfeatures = []
 for i,uid in enumerate(userXratings):
@@ -132,11 +142,26 @@ for uf in [u['features'] for u in userXfeatures]:
 # make a dataframe with all features and userids
 userXfeaturesdf = pd.DataFrame({'userid' : [u['userid'] for u in userXfeatures],
                                 'imdbids' : [u['imdbids'] for u in userXratings],
-                                'features' : [u for u in featuresnorelease]})
+                                'features' : [u['features'] for u in userXfeatures]})
 
 
-
-
+def wordclouduser(u):
+    from wordcloud import WordCloud
+    user0 = ''
+    for f in userXfeatures[u]['features']:
+        user0 += f+' '
+    wc = WordCloud().generate(user0)
+    
+    import matplotlib.pyplot as plt
+    plt.imshow(wc, interpolation='bilinear')
+    plt.axis("off")
+    
+    # lower max_font_size
+    wordcloud = WordCloud(max_font_size=40).generate(text)
+    plt.figure()
+    plt.imshow(wc, interpolation="bilinear")
+    plt.axis("off")
+    plt.show()
 
 
 ## get all movies containing that feature for a given userid and weight that feature
@@ -745,34 +770,34 @@ find the topN elements that are diverse and relevant to u
 
 
 
-                                                    # gensim LSA of user profiles
-# GENSIM
-import gensim
-from gensim import corpora, similarities, models
-from sklearn.metrics.pairwise import cosine_similarity
-import matplotlib.pyplot as plt
-np.random.seed(42)
-logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
-
-
-userfeaturetexts = [f['features'] for f in userXfeatures]
-dictionary = corpora.Dictionary(userfeaturetexts) #117897 unique keywords
-doc_term_matrix = [dictionary.doc2bow(doc) for doc in userfeaturetexts]
-
-corpora.MmCorpus.serialize('user_features_1_corpus',doc_term_matrix)
-#LSA_IMDB_corpus = corpora.MmCorpus('LSA_IMDB_CORPUS')
-
-# building the TFIDF matrix from the docterm matrix
-tfidf = gensim.models.TfidfModel(doc_term_matrix)
-tfidf_matrix = tfidf[doc_term_matrix]
-
-# LDA training
-lsi = gensim.models.lsimodel.LsiModel(corpus=tfidf_matrix, id2word=dictionary, num_topics=400)
-corpus_lsi = lsi[corpus_tfidf]
-
-# print the topics
-lsi.print_topics(50)
-
+#                                                    # gensim LSA of user profiles
+## GENSIM
+#import gensim
+#from gensim import corpora, similarities, models
+#from sklearn.metrics.pairwise import cosine_similarity
+#import matplotlib.pyplot as plt
+#np.random.seed(42)
+#logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+#
+#
+#userfeaturetexts = [f['features'] for f in userXfeatures]
+#dictionary = corpora.Dictionary(userfeaturetexts) #117897 unique keywords
+#doc_term_matrix = [dictionary.doc2bow(doc) for doc in userfeaturetexts]
+#
+#corpora.MmCorpus.serialize('user_features_1_corpus',doc_term_matrix)
+##LSA_IMDB_corpus = corpora.MmCorpus('LSA_IMDB_CORPUS')
+#
+## building the TFIDF matrix from the docterm matrix
+#tfidf = gensim.models.TfidfModel(doc_term_matrix)
+#tfidf_matrix = tfidf[doc_term_matrix]
+#
+## LDA training
+#lsi = gensim.models.lsimodel.LsiModel(corpus=tfidf_matrix, id2word=dictionary, num_topics=400)
+#corpus_lsi = lsi[corpus_tfidf]
+#
+## print the topics
+#lsi.print_topics(50)
+#
 
 
 

@@ -191,12 +191,12 @@ def getsimilarityfrommatrix(imdbid,topn,distmatrix):
 
 finaldata1copy = finaldata1.copy()
 
-for i,uf in enumerate(finaldata1copy):
-    stringfeature = uf['features']
-    strf = ''
-    for s in stringfeature:
-        strf += ' '+s
-    finaldata1copy[i]['string_features'] = strf
+#for i,uf in enumerate(finaldata1copy):
+#    stringfeature = uf['features']
+#    strf = ''
+#    for s in stringfeature:
+#        strf += ' '+s
+#    finaldata1copy[i]['string_features'] = strf
 
 
 #keywordfeatures = []
@@ -593,7 +593,7 @@ cluster_labels = km.fit_predict(UmSm)
 print("done in %0.3fs" % (time() - t0))
 print()
 from sklearn.metrics import silhouette_samples, silhouette_score
-silhouette_avg = silhouette_score(UmSmconc, cluster_labels)
+silhouette_avg = silhouette_score(UmSm, cluster_labels)
 print("For n_clusters =", k,
           "The average silhouette_score is :", silhouette_avg)    
 
@@ -608,18 +608,18 @@ print("For n_clusters =", k,
     #print()
     
     
-#origspacecentroids = svdmfconc.inverse_transform(km.cluster_centers_)
-#ordercentroids = origspacecentroids.argsort()[:,::-1]
-#terms = vmf.get_feature_names()
-#for i in range(k):
-#    print('cluster %d:'% i,end='')
-#    for ind in ordercentroids[i,:5]:
-#        print(' %s' % terms[ind],end='')
-#    print()
+origspacecentroids = svdmfconc.inverse_transform(km.cluster_centers_)
+ordercentroids = origspacecentroids.argsort()[:,::-1]
+terms = vmf.get_feature_names()
+for i in range(k):
+    print('cluster %d:'% i,end='')
+    for ind in ordercentroids[i,:5]:
+        print(' %s' % terms[ind],end='')
+    print()
     
     
 clusters = km.labels_.tolist()
-for count,tl in enumerate(finaldata1notflattened):
+for count,tl in enumerate(finaldata1copy):
     tl['movcluster'] = clusters[count]
     
 lenghtsclusters = [len(titlesincluster(ccc)) for ccc in range(k)]
