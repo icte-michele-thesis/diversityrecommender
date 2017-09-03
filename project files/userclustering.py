@@ -39,7 +39,7 @@ def getdataset(jsonfile):
 
 dataset1 = getdataset('finaldata1-withclusters.json') # movie features dataset  WITH CLUSTERS!!!
 
-userstats = ratings.groupby('userId', as_index=False).agg({'rating':[np.size,np.mean,np.std]}) # statistics on users
+userstats = ratings.groupby('userId', as_index=False).agg({'rating':[np.size,np.mean,np.std,np.min,np.max]}) # statistics on users
 ratingswmstd = pd.merge(ratings, userstats, on ='userId', how='inner')
 # get normalized ratings!!
 ratingswmstd['normrating'] = (ratingswmstd['rating'] - ratingswmstd[('rating', 'mean')])/ratingswmstd[('rating', 'std')]
@@ -53,10 +53,15 @@ moviesabovethreshold = pd.DataFrame(ratingswmstd[ratingswmstd['normrating']>0].m
 links = pd.merge(links, moviesabovethreshold, on = 'movieId', how = 'inner')
 linksimdb = list(links.imdbId) # the list of imdbid corresponding to movies rated above the normalized rating threshold
 
+rr = ratingswmstd['rating']
+rmin = ratingswmstd[('rating', 'amin')]
+rmax = ratingswmstd[('rating', 'amax')]
+ratingswmstd['minmaxrating'] = (rr-rmin)/(rmax-rmin)
 
 
-
-
+user1 = ratingswmstd[ratingswmstd['userId']==1]
+user2 = ratingswmstd[ratingswmstd['userId']==2]
+user3 = ratingswmstd[ratingswmstd['userId']==3]
 
 
 movieratings = pd.merge(ratingswmstd, movies, on ='movieId', how='inner')

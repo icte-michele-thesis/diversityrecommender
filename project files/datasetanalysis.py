@@ -108,12 +108,37 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn.apionly as sns
 
-#import importlib
+#
+import importlib
 #importlib.reload(mpl); importlib.reload(plt); importlib.reload(sns)
 
-fig, ax = plt.subplots(nrows=1,ncols=2,figsize=(10,4))
+metadatadf = metadatadf()
+lenkeys = [len(m['keywords'][:100]) for m in metadata]
+mkeys = pd.DataFrame({'sizes':lenkeys})
 
-plt.subplot(1,2,1)
+
+gs = gridspec.GridSpec(1, 2, width_ratios=[4, 1])
+ax1 = plt.subplot(gs[0])
+mkeys.plot(kind = 'hist',ax=ax1,bins=50)
+plt.title("keywords distribution")
+plt.ylabel('# of movies')
+plt.xlabel('# of keywords')
+plt.show()
+
+
+ax2 = plt.subplot(gs[1])
+mkeys.plot(kind = 'box',ax=ax2)
+plt.title("Keyword distribution")
+plt.ylabel('counts')
+plt.show()
+
+
+import matplotlib.gridspec as gridspec
+gs = gridspec.GridSpec(1, 3, width_ratios=[1, 3, 1])
+                     
+
+
+plt.subplot(gs[0])#(1,3,1)
 vp = sns.violinplot(data=ratings['rating'])
 vp.set_xticklabels(['global rating density'])
 plt.title("# of ratings per users")
@@ -126,8 +151,21 @@ plt.show()
 #plt.ylabel('# users')
 #plt.show()
 
-plt.subplot(1,2,2)
-userstats.drop(['userId',('rating','size'),('rating','std')],1).boxplot()
+userstats['means'] = userstats['rating']['mean']
+userstats['sizes'] = userstats['rating']['size']
+result = userstats.sort_values(['sizes'], ascending=False)
+ax2 = plt.subplot(gs[1])
+
+userstats.plot.hexbin(x='userId', y='means', gridsize=16,cmap='Blues',ax=ax2)
+#userstats.plot.scatter(x='userId', y='sizes',s=userstats['sizes']*.1)#,ax=ax2)
+
+    
+plt.title("Mean rating distribution")
+plt.ylabel('mean rating')
+plt.show()
+
+ax3 = plt.subplot(gs[2])
+userstats.means.plot.box(ax=ax3)
 plt.title("rating mean per users")
 plt.ylabel('rating scale')
 plt.show()
@@ -149,10 +187,10 @@ plt.ylabel('# users')
 plt.show()
 
 
-sns.lmplot(x='userId',y='means',data=userstats, 
+sns.lmplot(x='userId',y='means',data=userstats, fit_reg=False,
                 size=10, aspect=5,scatter_kws={"s": 15})
 
-userstats['means']
+ 
 
 sns.set_style("darkgrid")
 pal = sns.cubehelix_palette(10, start=.5, rot=-.75)#sns.diverging_palette(10, 133, sep=80, n=10)
@@ -192,8 +230,10 @@ plt.title('mean >= 4, '+str(us3['size'].count())+' users')
 plt.show()
 
 
+metadatadfkeys = metadatadf.keywords
+mkeys = pd.DataFrame({'sizes':lenkeys})
 
-
+lenkeys = [len(m['keywords']) for m in metadata]
 
 # import movie metadata from JSON FILE
 metadata = []
@@ -257,13 +297,13 @@ def inspectmissing():
                                 'missing':counts,
                                 'relative_missing':percent})
         
-    
+    print(missingvals)
     
     
     sns.barplot(x='relative_missing',y='metadata',data=missingvals) 
-    #sns.factorplot(x='missing', y='filled', hue='metadata', data=missingvals, kind='bar')    
+        #sns.factorplot(x='missing', y='filled', hue='metadata', data=missingvals, kind='bar')    
+            
         
-    
 
 
 
@@ -355,11 +395,22 @@ with open('METADATAVECTORIZED.json', 'w') as fout:
 #============================4.1-CLEAN UP TO 100 KEYWORDS-=====================================
 
 
+this = [m['keywords'] for m in [hm for hm in metadata if 'Hayao Miyazaki' in hm['director']]]
+
 # keyword analysis
 def analyzethis(this):
     keyword_count = analyzefeature(this)
     kwdc = list(list(row) for row in keyword_count)
     analyzefrequency(kwdc)
+
+
+def analyzelist(this):
+#   if a list of words is given as input.
+    keyword_count = list(sorted(createFrquencyTable(this).items(), key=operator.itemgetter(1), reverse=True))    
+    kwdc = list(list(row) for row in keyword_count)
+    analyzefrequency(kwdc)
+
+
 
 def agenre(this):
     keyword_count = findkeywordsfor(this)
@@ -991,11 +1042,6 @@ def addtruncatedrelease(metadatacleaned):
 #        meta[i]['keywords'] = m['keywords'][:50]
 
 #truncatekeywords(metadatacleaned)
-#120659
-for m in metadatacleaned:
-    if m['imdbid']==3845960:
-        for mm in m.values():
-                print(mm)
 
 def getlistoffeatures(d): 
     # d is the dictionary from the metadata files of a single movie

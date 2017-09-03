@@ -44,7 +44,6 @@ finaldata1 = importMoviesfromJSON('finaldata1')
 
 
 
-
 # work on a copy of the dataset!!!
 finaldata1copy = finaldata1.copy()
 
@@ -59,7 +58,11 @@ allimdbids = [f['imdbid'] for f in finaldata1copy]
     
 featuresnodecade = []
 for uf in [u['features'] for u in finaldata1copy]:
-    featuresnodecade.append([f for f in uf if '(decade)_' not in f])# and '(keywords)' in f])
+    cutkeywords = [f for f in uf if '(keywords)_' in f][:100]
+    nodecades = [f for f in uf if '(decade)_' not in f and '(keywords)_' not in f]
+    nodecades.extend(cutkeywords)
+    
+    featuresnodecade.append(nodecades)
 
 
 finaldata1copydf = pd.DataFrame({'imdbid' : [u['imdbid'] for u in finaldata1copy],
@@ -78,13 +81,13 @@ finaldata1copydf = pd.DataFrame({'imdbid' : [u['imdbid'] for u in finaldata1copy
 #------- TF-IDF - find best min and max df
 from sklearn.feature_extraction.text import TfidfVectorizer
 import scipy
-vmf = TfidfVectorizer(max_df=0.1, min_df=10, tokenizer=lambda i:i, lowercase=False)
+vmf = TfidfVectorizer(max_df=0.2, min_df=5, tokenizer=lambda i:i, lowercase=False)
 UFmf = vmf.fit_transform(finaldata1copydf.features_tok)
 UFmf.shape
 Xmf = scipy.sparse.csc_matrix(UFmf)
-#[k for k in vmf.vocabulary_.keys() if k not in vmf.vocabulary_.keys()]
-
-
+#[k for k in v2.keys() if k not in v1.keys()]
+#v2 = vmf.vocabulary_
+#v1 = vmf.vocabulary_
 
 #------- SVD - FIND THE VALUE OF K
 #from scipy.sparse.linalg import svds # scipy implementation
@@ -156,18 +159,32 @@ distanceUFcv = pairwise_distances(UmSm,metric='cosine')
 distancecityblock = pairwise_distances(UmSm,metric='cityblock')
 distanceeuclid = pairwise_distances(UmSm,metric='euclidean')
 
-cos = getsimilarityfrommatrix(2379713,10,distanceUFcv)
+cos = getsimilarityfrommatrix(3659388,20,distanceUFcv)
 cblock = getsimilarityfrommatrix(2379713,10,distancecityblock)
-eucl = getsimilarityfrommatrix(2379713,10,distanceeuclid)
+eucl = getsimilarityfrommatrix(1638355,10,distanceeuclid)
+#cosimavgs = simavgs(700)
+#plt.plot(cosimavgs)
+#def simavgs(n):
+#    cosims = []
+#    for i in range(n):
+#        cosims.append(getsimilarityfrommatrix(1392190,i,distanceUFcv)[1])
+#    return cosims
 
-fmt = '{:<8}{:<30}{:<52}{}'
 
-print(fmt.format('', 'cosine', 'cityblock', 'euclidean'))
-for i, (co, cb, eu) in enumerate(zip(cos[0], cblock[0], eucl[0])):
-    print(fmt.format(i, co, cb, eu))
-
+comparisondf = pd.DataFrame({'cosine':cos[0],
+                             'cityblock':cblock[0],
+                             'euclidean':eucl[0]})
 
 
+    
+import networkx as nx
+G = nx.from_numpy_matrix(distanceUFcv) 
+nx.draw(G)
+pos = nx.random_layout(G) 
+    
+    
+    
+    
 
 # ------- HIERARCHICAL CLUSTERING
 from scipy.cluster.hierarchy import dendrogram, linkage
