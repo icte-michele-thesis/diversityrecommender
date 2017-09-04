@@ -63,6 +63,17 @@ user1 = ratingswmstd[ratingswmstd['userId']==1]
 user2 = ratingswmstd[ratingswmstd['userId']==2]
 user3 = ratingswmstd[ratingswmstd['userId']==3]
 
+user1.rating.plot()
+user1.minmaxrating.plot()
+user1.normrating.plot()
+ratingswmstd.plot.hexbin(x='userId', y='minmaxrating', gridsize=25,cmap='Blues')
+user2.rating.plot()
+user2.minmaxrating.plot()
+user2.normrating.plot()
+user3.rating.plot()
+user3.minmaxrating.plot()
+user3.normrating.plot()
+
 
 movieratings = pd.merge(ratingswmstd, movies, on ='movieId', how='inner')
 

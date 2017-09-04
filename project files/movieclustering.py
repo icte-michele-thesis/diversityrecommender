@@ -64,6 +64,8 @@ for uf in [u['features'] for u in finaldata1copy]:
     
     featuresnodecade.append(nodecades)
 
+with open('finaldata1modelread.json', 'w') as fout:
+    json.dump(featuresnodecade, fout)
 
 finaldata1copydf = pd.DataFrame({'imdbid' : [u['imdbid'] for u in finaldata1copy],
                                  #'numratings' : [imdbratings[imdbratings['imdbId']==imb].rating.count()for imb in allimdbids],
@@ -112,9 +114,22 @@ from sklearn.decomposition import TruncatedSVD # scikit implementation
 # with scikit learn implementation
 svdmf = TruncatedSVD(n_components=300, n_iter=10, random_state=0)
 UmSm = svdmf.fit_transform(Xmf) # scikit returns the U*S matrix
-
+from sklearn.preprocessing import Normalizer
+svdnorm = Normalizer(copy=True).fit_transform(UmSm)
 
 inspect3d(UmSm,0,1,2)
+
+
+
+
+#==================================0 SIMILARITY QUERY===================================
+doctest = featuresnodecade[0:10]
+docbow = vmf.transform(doctest)
+docsvd = svdmf.transform(docbow)
+from sklearn.metrics import pairwise_distances
+distancequerymatrix = pairwise_distances(docsvd, 
+                                     UmSm, 
+                                     metric='cosine')
 
 
 
@@ -122,21 +137,6 @@ inspect3d(UmSm,0,1,2)
 
 #------- creation of distance matrix, needed for the hierarchical clustering
 from sklearn.metrics import pairwise_distances
-from scipy.spatial.distance import pdist,cosine,squareform
-
-
-
-# COSINE METRIC
-dist_outc = pdist(UmSm,'cosine')
-
-# EUCLIDEAN METRIC
-dist_oute = pdist(UmSm)
-
-
-
-
-
-
 
 # get similarity 
 def getsimilarityfrommatrix(imdbid,topn,distmatrix):
@@ -156,12 +156,12 @@ def getsimilarityfrommatrix(imdbid,topn,distmatrix):
 
 # qualitative comparison of the 3 distance metrics
 distanceUFcv = pairwise_distances(UmSm,metric='cosine')
-distancecityblock = pairwise_distances(UmSm,metric='cityblock')
+#distancecityblock = pairwise_distances(UmSm,metric='cityblock')
 distanceeuclid = pairwise_distances(UmSm,metric='euclidean')
 
 cos = getsimilarityfrommatrix(3659388,20,distanceUFcv)
-cblock = getsimilarityfrommatrix(2379713,10,distancecityblock)
-eucl = getsimilarityfrommatrix(1638355,10,distanceeuclid)
+#cblock = getsimilarityfrommatrix(3659388,10,distancecityblock)
+eucl = getsimilarityfrommatrix(3659388,10,distanceeuclid)
 #cosimavgs = simavgs(700)
 #plt.plot(cosimavgs)
 #def simavgs(n):
@@ -181,14 +181,27 @@ import networkx as nx
 G = nx.from_numpy_matrix(distanceUFcv) 
 nx.draw(G)
 pos = nx.random_layout(G) 
-    
-    
+def create_directed_graph(rows):
+    g = nx.DiGraph()
+    for row in rows:
+        curRow = row['r']
+        curCol = row['c']
+        weight = row['val']
+        g.add_edge(curRow,curCol,Weight=weight)
+    return g    
+G = create_directed_graph(distanceUFcv)    
     
     
 
 # ------- HIERARCHICAL CLUSTERING
+
+from scipy.spatial.distance import pdist,cosine,squareform
+# COSINE METRIC
+dist_outc = pdist(UmSm,'cosine')
+dist_out = pdist(UmSm)
+
 from scipy.cluster.hierarchy import dendrogram, linkage
-Zm = linkage(dist_outc,'average')#, 'average', 'cosine')
+Zm = linkage(dist_out,'ward')#, 'average', 'cosine')
 
 from scipy.cluster.hierarchy import cophenet
 
@@ -197,13 +210,15 @@ cm, coph_distsm = cophenet(Zm, dist_outc)
 cm
 # plot the dendogram
 plt.figure(figsize=(25, 10))
-plt.title('Hierarchical Clustering Dendrogram: average-cityblock')
-plt.xlabel('users')
+plt.title('Hierarchical Clustering Dendrogram: ward')
+plt.xlabel('movies')
 plt.ylabel('distance')
 dendrogram(
-    Zm,
+    Zm, truncate_mode='lastp',  # show only the last p merged clusters
+    p=12,  # show only the last p merged clusters
+    show_contracted=True,
     leaf_rotation=90.,  # rotates the x axis labels
-    leaf_font_size=3.,  # font size for the x axis labels
+    leaf_font_size=6.,  # font size for the x axis labels
     
 )
 plt.show()

@@ -295,7 +295,7 @@ def inspectmissing():
     
     missingvals = pd.DataFrame({'metadata':metadatalabels,
                                 'missing':counts,
-                                'relative_missing':percent})
+                                'relative_missing':[p*100 for p in percent]})
         
     print(missingvals)
     
@@ -572,7 +572,7 @@ def findkeywordsfor(genre):
         if(genre in m['genres'] and 'N/A' not in m['keywords']):
             wordlist.append(m['keywords'][:10])
     keyfreq = createFrquencyTable(wordlist)
-    commonkey = list(sorted(keyfreq.items(), key=operator.itemgetter(1), reverse=True)[10:30])
+    commonkey = list(sorted(keyfreq.items(), key=operator.itemgetter(1), reverse=True)[:10])
     return commonkey
 # genre closer inspection
 f, axarr = plt.subplots(3,3)
@@ -774,7 +774,7 @@ plt.ylabel('# of movies')
 metadataklim = metadata
 for i,m in enumerate(metadataklim):
     if(len(m['keywords']) > 100): # cut-off at 100
-        metadataklim[i]['keywords'] = m['keywords'][0:100]
+        metadataklim[i]['keywords'] = m['keywords']#[0:100]
 
 # save to separate json
 with open('METADATAVECTKEYWORD100.json', 'w') as fout:
@@ -882,7 +882,10 @@ for i,m in enumerate(metadata):
         print(m['imdbid'])
         print(m['languages'])
         print(m['countries'])
-        metadata[i]['keywords'] = findkeywordsfor(m['genres'][0])
+        gkeywords = []
+        for g in m['genres']:
+            gkeywords.extend(findkeywordsfor(g))
+        metadata[i]['keywords'] = gkeywords
 
 
 #================ CLEAN KEYWORDS EEEEND!!!
@@ -1078,7 +1081,7 @@ def getandsavedataset(metadatafile,jsonname):
 
 [type(v) for v in metadatacleaned[1].values()]
 
-getandsavedataset(metadatacleaned,'finaldata1') # dataset 1 movies removed for errors in imdb features but N/A left for other features
+getandsavedataset(metadatacleaned,'finaldata1.json') # dataset 1 movies removed for errors in imdb features but N/A left for other features
 getandsavedataset(metadatawoogw,'finaldata2') # dataset 3 as above but without OST and writer (the features with most missing vals in movies)
 getandsavedataset(metadatanomissing,'finaldata3') # dataset 3 no missing features
 
